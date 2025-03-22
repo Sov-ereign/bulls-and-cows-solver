@@ -1,45 +1,258 @@
-<!--
-  Hit RUN to see this project in action!
-  
-  This project will auto-refresh as you edit the HTML, CSS and JS. See README.md for more info (including how to disable auto-refresh and install packages).
--->
-
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
-  <title>Replit</title>
-  <link href="style.css" rel="stylesheet" type="text/css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulls and Cows Solver</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle, #1a1a2e, #000);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+        h2 {
+            font-size: 3em;
+            color: #00adb5;
+            margin: 10px;
+        }
+        .code-length-section {
+            background-color: #292b2f;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        label, input, button {
+            font-size: 1.2em;
+            margin: 10px;
+            padding: 10px;
+            color: #ffffff;
+            background: #00adb5;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        label {
+            font-size: 1.5em;
+        }
+        button:hover {
+            background: #007b9b;
+        }
+        .guess-section {
+            background-color: #222831;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+        .guess-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 5px;
+        }
+        #possibilities {
+            white-space: pre-wrap;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        footer {
+            position: absolute;
+            bottom: 20px;
+            font-size: 0.9em;
+            color: #999;
+        }
+        .social-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .social-buttons a {
+            text-decoration: none;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            background-color: #00adb5;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .social-buttons a:hover {
+            background-color: #007b9b;
+        }
+    </style>
 </head>
-
 <body>
-  <main>
-    <h1 class="title">Welcome to HTML on Replit!</h1>
-    <p class="description">Get started by editing
-      <code class="code">index.html</code>. The webview will auto-refresh as you edit! (See <code
-        class="code">README.md</code> if you want to
-      disable auto-refresh.)
-    </p>
+    <h2>Bulls and Cows Solver</h2>
+    <div class="code-length-section">
+        <label>
+            Enter code length (1-10):
+            <input type="number" id="length" min="1" max="10">
+        </label>
+        <button onclick="startGame()">Start Game</button>
+    </div>
 
-    <section class="grid">
-      <a href="https://replit.com/learn" class='card'>
-        <h2>Learn &rarr;</h2>
-        <p>Find tutorials on Replit to learn more.</p>
-      </a>
+    <div class="guess-section">
+        <div id="guesses"></div>
+        <button onclick="addGuessRow()">Add Guess</button>
+        <button onclick="calculatePossibilities()">Calculate</button>
+        <button onclick="resetGame()">Reset</button>
+    </div>
 
-      <a href="https://docs.replit.com/category/deployments" class='card'>
-        <h2>Deploy &rarr;</h2>
-        <p>
-          After you are happy with this app, deploy it on Replit!
-        </p>
-      </a>
-    </section>
-  </main>
+    <h3>Guess Count: <span id="guessCount">0</span></h3>
+    <h3>Remaining Possibilities</h3>
+    <div id="possibilities"></div>
+    <h3>Recommended Next Guess</h3>
+    <p id="recommendation"></p>
+    <h3>Analysis Suggestion</h3>
+    <p id="analysisSuggestion"></p>
 
-  <script type="module" src="script.js"></script>
+    <div class="social-buttons">
+        <a href="https://github.com/Sov-ereign" target="_blank">Fork me on GitHub</a>
+        <a href="https://www.instagram.com/eniigmatic._.one.x/" target="_blank">Instagram</a>
+        <a href="https://x.com/_Sov_ereign" target="_blank">X (Twitter)</a>
+        <a href="https://www.linkedin.com/in/somenath-gorai-b12a26326/" target="_blank">LinkedIn</a>
+        <a href="https://www.youtube.com/@Cortar_FF" target="_blank">YouTube</a>
+    </div>
 
+    <footer>
+        © 2024 PROJECT DCA | Beta Version 1.0
+    </footer>
+
+    <script>
+        let possibilities = [];
+        let allCombinations = [];
+        let guessCount = 0;
+
+        function generateCombinations(length) {
+            let digits = '0123456789';
+            function permute(arr, l) {
+                if (l === 0) return [''];
+                let res = [];
+                for (let i = 0; i < arr.length; i++) {
+                    let rest = permute(arr.slice(0, i).concat(arr.slice(i + 1)), l - 1);
+                    for (let r of rest) res.push(arr[i] + r);
+                }
+                return res;
+            }
+            return permute(digits.split(''), length);
+        }
+
+        function calculateBullsAndCows(guess, secret) {
+            let bulls = 0, cows = 0;
+            for (let i = 0; i < guess.length; i++) {
+                if (guess[i] === secret[i]) bulls++;
+                else if (secret.includes(guess[i])) cows++;
+            }
+            return [bulls, cows];
+        }
+
+        function findBestNextGuess() {
+            if (possibilities.length <= 2) return possibilities[0];
+
+            let bestGuess = null, minMaxSize = Infinity;
+            for (let guess of allCombinations) {
+                let partition = {};
+                for (let secret of possibilities) {
+                    let key = calculateBullsAndCows(guess, secret).join(',');
+                    partition[key] = (partition[key] || 0) + 1;
+                }
+                let worstCaseSize = Math.max(...Object.values(partition));
+                if (worstCaseSize < minMaxSize) {
+                    minMaxSize = worstCaseSize;
+                    bestGuess = guess;
+                }
+            }
+            return bestGuess;
+        }
+
+        function findAnalysisSuggestion() {
+            if (possibilities.length <= 2) return possibilities[0];
+
+            let bestGuess = null;
+            let bestExpectedSize = Infinity;
+            for (let guess of allCombinations) {
+                let partition = {};
+                for (let secret of possibilities) {
+                    let key = calculateBullsAndCows(guess, secret).join(',');
+                    partition[key] = (partition[key] || 0) + 1;
+                }
+                let expectedSize = Object.values(partition).reduce((acc, count) => acc + count * count, 0) / possibilities.length;
+                if (expectedSize < bestExpectedSize) {
+                    bestExpectedSize = expectedSize;
+                    bestGuess = guess;
+                }
+            }
+            return bestGuess;
+        }
+
+        function startGame() {
+            let length = parseInt(document.getElementById('length').value);
+            if (isNaN(length) || length < 1 || length > 10) {
+                alert('Enter a valid length between 1 and 10.');
+                return;
+            }
+            possibilities = generateCombinations(length);
+            allCombinations = [...possibilities];
+            document.getElementById('possibilities').textContent = possibilities.join(', ');
+            document.getElementById('recommendation').textContent = '';
+            document.getElementById('analysisSuggestion').textContent = '';
+            document.getElementById('guessCount').textContent = '0';
+            document.getElementById('guesses').innerHTML = '';
+            guessCount = 0;
+        }
+
+        function addGuessRow() {
+            let div = document.createElement('div');
+            div.classList.add('guess-row');
+            div.innerHTML = `
+                <input type="text" class="guess" placeholder="Guess" maxlength="10">
+                <input type="number" class="bulls" placeholder="Bulls" min="0">
+                <input type="number" class="cows" placeholder="Cows" min="0">
+            `;
+            document.getElementById('guesses').appendChild(div);
+        }
+
+        function calculatePossibilities() {
+            let guessInputs = document.querySelectorAll('.guess');
+            let bullsInputs = document.querySelectorAll('.bulls');
+            let cowsInputs = document.querySelectorAll('.cows');
+            let validGuesses = [];
+
+            for (let i = 0; i < guessInputs.length; i++) {
+                let guess = guessInputs[i].value;
+                let bulls = parseInt(bullsInputs[i].value);
+                let cows = parseInt(cowsInputs[i].value);
+                if (allCombinations.includes(guess) && !isNaN(bulls) && !isNaN(cows)) {
+                    validGuesses.push({ guess, bulls, cows });
+                }
+            }
+
+            possibilities = allCombinations.filter(code => 
+                validGuesses.every(({ guess, bulls, cows }) =>
+                    JSON.stringify(calculateBullsAndCows(guess, code)) === JSON.stringify([bulls, cows])
+                )
+            );
+            guessCount = validGuesses.length;
+            document.getElementById('guessCount').textContent = guessCount;
+            document.getElementById('possibilities').textContent = possibilities.join(', ');
+            document.getElementById('recommendation').textContent = 'Recommended next guess: ' + findBestNextGuess();
+            document.getElementById('analysisSuggestion').textContent = 'Analysis suggestion: ' + findAnalysisSuggestion();
+        }
+
+        function resetGame() {
+            location.reload();
+        }
+    </script>
 </body>
-
 </html>
